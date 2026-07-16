@@ -241,7 +241,90 @@ function obterFeedbackVisual(probabilidade) {
     return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
 }
 
-// CÁLCULO DE PROBABILIDADE COM AS REGRAS DE PRIORIDADE E REGRA NON-ENGINE = BRICK + 10 MÃOS VISUAIS
+function testarMaoValida(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxBricks) {
+
+    const maoCopiada = maoRoles.map(roles => {
+        if (!Array.isArray(roles)) return [];
+        return roles.map(r => {
+            let s = String(r).toLowerCase().trim();
+            if (s === 'non-engine' || s === 'non_engine') return 'nonengine';
+            return s;
+        });
+    });
+
+    if (maxBricks > 0) {
+        let bricksDetectados = 0;
+        maoCopiada.forEach(roles => {
+            if (roles.includes('brick')) {
+                bricksDetectados++;
+            }
+        });
+        if (bricksDetectados > maxBricks) {
+            return false;
+        }
+    }
+
+    const cartasValidas = maoCopiada.map(roles => {
+        if (maxBricks > 0) {
+            return roles.filter(r => r !== 'brick' && r !== '');
+        }
+        return roles.filter(r => r !== '');
+    });
+
+    function resolver(index, sFaltando, eFaltando, nFaltando) {
+        const s = reqStarters > 0 ? Math.max(0, sFaltando) : 0;
+        const e = reqExtenders > 0 ? Math.max(0, eFaltando) : 0;
+        const n = reqNonEngine > 0 ? Math.max(0, nFaltando) : 0;
+
+        if (s === 0 && e === 0 && n === 0) {
+            return true;
+        }
+
+        if (index >= cartasValidas.length) {
+            return false;
+        }
+
+        const rolesDaCarta = cartasValidas[index];
+
+        if (rolesDaCarta.length === 0) {
+            return resolver(index + 1, s, e, n);
+        }
+
+        if (reqStarters > 0 && s > 0 && rolesDaCarta.includes('starter')) {
+            if (resolver(index + 1, s - 1, e, n)) {
+                return true;
+            }
+        }
+
+        if (reqExtenders > 0 && e > 0 && rolesDaCarta.includes('extender')) {
+            if (resolver(index + 1, s, e - 1, n)) {
+                return true;
+            }
+        }
+
+        if (reqNonEngine > 0 && n > 0 && rolesDaCarta.includes('nonengine')) {
+            if (resolver(index + 1, s, e, n - 1)) {
+                return true;
+            }
+        }
+
+        return resolver(index + 1, s, e, n);
+    }
+
+    return resolver(0, reqStarters, reqExtenders, reqNonEngine);
+}
+function obterClasseBorda(roles) {
+    if (!roles || roles.length === 0) return 'border-none';
+    
+    if (roles.length === 1) return `border-${roles[0]}`;
+    
+    if (roles.length === 2) {
+        return `border-${roles[0]}-${roles[1]}`;
+    }
+    
+    return 'border-multi';
+}
+
 document.getElementById('btn-calculate').addEventListener('click', () => {
     const handSize = parseInt(document.getElementById('hand-size').value);
     const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
@@ -249,13 +332,12 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     const reqNonEngine = parseInt(document.getElementById('cond-nonengine').value) || 0;
     const maxBricks = parseInt(document.getElementById('cond-bricks').value) ?? 99;
 
-    // Criar representação plana do deck para a simulação matemática
     const linearDeck = [];
     deckAtual.forEach(item => {
         for (let i = 0; i < item.count; i++) {
             linearDeck.push({
                 card: item.card,
-                roles: [...item.roles]
+                roles: Array.isArray(item.roles) ? [...item.roles] : []
             });
         }
     });
@@ -270,7 +352,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
     for (let s = 0; s < RUNS; s++) {
         const sample = [...linearDeck];
-        const maoDesejada = [];
+        const maoRolesSimulada = [];
 
         for (let i = 0; i < handSize; i++) {
             const randIndex = i + Math.floor(Math.random() * (sample.length - i));
@@ -278,52 +360,21 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             sample[i] = sample[randIndex];
             sample[randIndex] = temp;
             
-            maoDesejada.push(sample[i].roles); 
+            maoRolesSimulada.push([...sample[i].roles]); 
         }
 
-        let startersSatisfeitos = 0;
-        let extendersSatisfeitos = 0;
-        let nonengineSatisfeitos = 0;
-        let bricksDetectados = 0;
-
-        // Regra: Toda non-engine e todo brick tradicional contam como Bricks
-        maoDesejada.forEach(roles => {
-            if (roles.includes('brick') || roles.includes('nonengine')) {
-                bricksDetectados++;
-            }
-        });
-
-        // Resolve os papéis ativos baseados na preferência
-        let cartasDisponiveis = maoDesejada.map(roles => ({
-            rolesSemBrick: roles.filter(r => r !== 'brick'), 
-            usadaComo: null
-        }));
-
-        cartasDisponiveis.forEach(carta => {
-            if (carta.rolesSemBrick.length === 0) return;
-            carta.usadaComo = carta.rolesSemBrick[0];
-            
-            if (carta.usadaComo === 'starter') startersSatisfeitos++;
-            else if (carta.usadaComo === 'extender') extendersSatisfeitos++;
-            else if (carta.usadaComo === 'nonengine') nonengineSatisfeitos++;
-        });
-
-        if (startersSatisfeitos >= reqStarters && 
-            extendersSatisfeitos >= reqExtenders && 
-            nonengineSatisfeitos >= reqNonEngine && 
-            bricksDetectados <= maxBricks) {
+        if (testarMaoValida(maoRolesSimulada, reqStarters, reqExtenders, reqNonEngine, maxBricks)) {
             sucessos++;
         }
     }
 
     const probabilidade = (sucessos / RUNS) * 100;
 
-    // --- GERAÇÃO DAS 10 MÃOS VISUAIS DE EXEMPLO ---
+    // --- RENDERIZAR AS 10 MÃOS VISUAIS ---
     const handsContainer = document.getElementById('hands-container');
     handsContainer.innerHTML = '';
 
     for (let h = 0; h < 10; h++) {
-        // Gera um sorteio fresco
         const pool = [...linearDeck];
         const maoExemplo = [];
         for (let i = 0; i < handSize; i++) {
@@ -334,32 +385,13 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             maoExemplo.push(pool[i]);
         }
 
-        // Avalia se esta mão de exemplo foi um sucesso para rotular a mão inteira
-        let handStarters = 0, handExtenders = 0, handNonEngine = 0, handBricks = 0;
+        // Garante que as mãos de exemplo também ganham cópias limpas e exclusivas
+        const mapeamentoRolesExemplo = maoExemplo.map(item => [...item.roles]);
+        const ehMaoSucesso = testarMaoValida(mapeamentoRolesExemplo, reqStarters, reqExtenders, reqNonEngine, maxBricks);
         
-        maoExemplo.forEach(item => {
-            const r = item.roles;
-            if (r.includes('brick') || r.includes('nonengine')) handBricks++;
-            
-            const rolesUteis = r.filter(x => x !== 'brick');
-            if (rolesUteis.length > 0) {
-                const principal = rolesUteis[0];
-                if (principal === 'starter') handStarters++;
-                else if (principal === 'extender') handExtenders++;
-                else if (principal === 'nonengine') handNonEngine++;
-            }
-        });
-
-        const ehMaoSucesso = (handStarters >= reqStarters && handExtenders >= reqExtenders && handNonEngine >= reqNonEngine && handBricks <= maxBricks);
-        
-        // Renderiza a linha da mão
         const handRow = document.createElement('div');
         handRow.className = 'simulated-hand-row';
-        if (ehMaoSucesso) {
-            handRow.style.borderLeft = "4px solid #22c55e";
-        } else {
-            handRow.style.borderLeft = "4px solid #ef4444";
-        }
+        handRow.style.borderLeft = ehMaoSucesso ? "4px solid #22c55e" : "4px solid #ef4444";
 
         const statusMao = ehMaoSucesso 
             ? `<span style="color: #22c55e; font-weight: bold;">[MÃO VÁLIDA]</span>` 
@@ -368,16 +400,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         let cardsHTML = '';
         maoExemplo.forEach(item => {
             const imgUrl = item.card.image || 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
-            
-            // Determina a cor da borda da carta com base no seu papel prioritário
-            let borderClass = 'border-none';
-            if (item.roles.length > 0) {
-                const prioritario = item.roles[0];
-                if (prioritario === 'starter') borderClass = 'border-starter';
-                else if (prioritario === 'extender') borderClass = 'border-extender';
-                else if (prioritario === 'nonengine') borderClass = 'border-nonengine';
-                else if (prioritario === 'brick') borderClass = 'border-brick';
-            }
+            const borderClass = obterClasseBorda(item.roles);
 
             cardsHTML += `
                 <div class="hand-card-item">
@@ -396,7 +419,6 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         handsContainer.appendChild(handRow);
     }
 
-    // Exibe feedbacks e rola para a tela de resultados
     const feedback = obterFeedbackVisual(probabilidade);
     const resultBox = document.getElementById('result-box');
     const percentageText = document.getElementById('calc-percentage');
