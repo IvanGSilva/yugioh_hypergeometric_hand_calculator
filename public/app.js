@@ -65,41 +65,27 @@ function processarYDK(conteudo) {
 
     for (let i = 0; i < linhas.length; i++) {
         let linha = linhas[i].trim();
-        if (linha === '#main') {
-            naMainDeck = true;
-            continue;
-        }
-        if (linha.startsWith('#extra') || inline.startsWith('!side')) {
-            naMainDeck = false;
-            continue;
-        }
+        if (linha === '#main') { naMainDeck = true; continue; }
+        if (linha.startsWith('#extra') || linha.startsWith('!side')) { naMainDeck = false; continue; }
         if (naMainDeck && /^\d+$/.test(linha)) {
             idsNoDeck.push(parseInt(linha));
         }
     }
 
-    const contagemIds = {};
-    idsNoDeck.forEach(id => contagemIds[id] = (contagemIds[id] || 0) + 1);
+    const idsUnicos = [...new Set(idsNoDeck)];
 
-    deckAtual = [];
-    for (const [idStr, count] of Object.entries(contagemIds)) {
-        const id = parseInt(idStr);
+    deckAtual = idsUnicos.map(id => {
+        const count = idsNoDeck.filter(x => x === id).length;
         const cardInfo = bancoCartas.find(c => c.id === id);
         
-        if (cardInfo) {
-            deckAtual.push({
-                card: cardInfo,
-                count: count,
-                roles: []
-            });
-        } else {
-            deckAtual.push({
-                card: { id, name: `ID Não Localizado (${id})`, type: 'Desconhecido', image: '' },
-                count: count,
-                roles: []
-            });
-        }
-    }
+        const cartaAntiga = deckAtual.find(item => item.card.id === id);
+        
+        return {
+            card: cardInfo || { id, name: `ID ${id}`, type: 'Desconhecido', image: '' },
+            count: count,
+            roles: cartaAntiga ? cartaAntiga.roles : []
+        };
+    });
 
     salvarSessaoDecks();
     renderizarWorkspace();
