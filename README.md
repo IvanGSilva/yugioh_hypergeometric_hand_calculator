@@ -15,6 +15,20 @@ To handle the complexity of Yu-Gi-Oh! deck analysis and simulate thousands of sc
 
 ---
 
+Initial Screen
+![Initial Screen](docs/doc0_tela_inicial.png)
+
+.YDK loaded
+![.YDK loaded](docs/doc1_ydk_carregado.png)
+
+Probability Calculated
+![Probability Calculated](docs/doc2_probabilidade_calculada.png)
+
+Desity and Hands Conainers
+![Desity and Hands Conainers](docs/dock3_desidade_e_amostra_de_maos.png)
+
+---
+
 ## Repository Structure
 
 ```text
