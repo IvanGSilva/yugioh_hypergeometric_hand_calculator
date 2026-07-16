@@ -332,3 +332,50 @@ h1, h2, h3, h4 {
 .border-multi { 
     background: linear-gradient(135deg, #22c55e 0%, #3b82f6 50%, #a855f7 100%) !important; 
 }
+
+#stats-panel{
+    margin-top: 10px;
+    border: 5px solid var(--border);
+}
+
+.stats-grid-cat {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-box {
+    background: #1a1a1e;
+    padding: 0.8rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+.stat-value { font-size: 1.2rem; font-weight: bold; margin-top: 0.2rem; }
+
+.stats-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.stat-card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.stat-card-item img {
+    width: 100%;
+    border-radius: 3px;
+    filter: brightness(0.9);
+}
+
+.stat-card-pct {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}

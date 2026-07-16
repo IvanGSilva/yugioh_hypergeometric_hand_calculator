@@ -138,7 +138,6 @@ function renderizarWorkspace() {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'deck-item';
         
-        // CORREÇÃO: Puxa do Proxy Cache local do servidor backend
         const imageUrl = item.card && item.card.id 
             ? `http://localhost:3000/api/imagem-carta?id=${item.card.id}` 
             : 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
@@ -318,7 +317,6 @@ function testarMaoValida(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxB
     return resolver(0, reqStarters, reqExtenders, reqNonEngine);
 }
 
-// NOVO MOTOR DE CLASSIFICAÇÃO DE MÃOS SEGUNDO AS SUAS ESPECIFICAÇÕES
 function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxBricks) {
     const mao = maoRoles.map(roles => {
         if (!Array.isArray(roles)) return [];
@@ -331,7 +329,6 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
 
     const ehValida = testarMaoValida(mao, reqStarters, reqExtenders, reqNonEngine, maxBricks);
 
-    // Contadores de presença física absoluta na mão
     let qtdStarters = 0;
     let qtdExtenders = 0;
     let qtdNonEngine = 0;
@@ -344,7 +341,7 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
         if (roles.includes('brick')) qtdBricks++;
     });
 
-    // --- CASO 1: MÃO NÃO CUMPRIU OS REQUISITOS COMBO ---
+    // --- MÃO NÃO CUMPRIU OS REQUISITOS COMBO ---
     if (!ehValida) {
         // "Uma que contenha somente non-engine e bricks"
         const apenasNonEngineEBricks = (qtdNonEngine > 0 || qtdBricks > 0) && qtdStarters === 0 && qtdExtenders === 0;
@@ -360,7 +357,7 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
         return { label: "Mão Inválida (Sem Combo)", cor: "#ef4444" };
     }
 
-    // --- CASO 2: MÃO VÁLIDA (CUMPRIU OS REQUISITOS COMBO) ---
+    // --- MÃO VÁLIDA (CUMPRIU OS REQUISITOS COMBO) ---
 
     // "Uma que cumprir os filtros das categorias mas que venha com pelo menos 1 brick"
     if (qtdBricks > 0) {
@@ -368,7 +365,6 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
     }
 
     // "Uma que se cumprir os filtros e todas as outras cartas forem non-engine"
-    // Para descobrir as "outras cartas", removemos uma carta elegível de cada meta ativa
     let cartasRestantes = [...mao];
     
     for (let i = 0; i < reqStarters; i++) {
@@ -391,7 +387,6 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
     }
 
     // "Uma mão com exatamente as condições de categorias"
-    // (Não tem sobras de combo e nem cartas extras com papel ativo que excedam as metas definidas)
     const exatamenteAsCondicoes = (qtdStarters === reqStarters) && (qtdExtenders === reqExtenders) && (qtdNonEngine === reqNonEngine);
     if (exatamenteAsCondicoes) {
         return { label: "Mão Exata (Mínimo das Categorias)", cor: "#10b981" };
@@ -411,7 +406,54 @@ function obterClasseBorda(roles) {
     return 'border-multi';
 }
 
-// CÁLCULO DE PROBABILIDADE COM AS NOVAS MENSAGENS E CONFIGURAÇÕES
+function atualizarPainelEstatisticas() {
+    const panel = document.getElementById('stats-panel');
+    const content = document.getElementById('stats-content');
+    
+    if (deckAtual.length === 0) {
+        panel.classList.add('hidden');
+        return;
+    }
+    
+    panel.classList.remove('hidden');
+    const totalCartas = deckAtual.reduce((sum, item) => sum + item.count, 0);
+    const categorias = [
+        { id: 'starter', label: 'Starters', color: '#22c55e' },
+        { id: 'extender', label: 'Extenders', color: '#3b82f6' },
+        { id: 'nonengine', label: 'Non-Engine', color: '#a855f7' },
+        { id: 'brick', label: 'Bricks', color: '#ef4444' }
+    ];
+
+    // Gerar HTML das categorias
+    let html = `<div class="stats-grid-cat">`;
+    categorias.forEach(cat => {
+        let count = deckAtual.filter(i => i.roles.includes(cat.id)).reduce((sum, i) => sum + i.count, 0);
+        let pct = ((count / totalCartas) * 100).toFixed(1);
+        html += `
+            <div class="stat-box" style="border-bottom: 2px solid ${cat.color}">
+                <div class="stat-label">${cat.label}</div>
+                <div class="stat-value">${pct}%</div>
+            </div>`;
+    });
+    html += `</div><hr style="margin: 1.5rem 0; border-color: var(--border);">`;
+
+    // Gerar HTML das imagens das cartas
+    html += `<div class="stats-cards-grid">`;
+    deckAtual.forEach(item => {
+        const imgUrl = `http://localhost:3000/api/imagem-carta?id=${item.card.id}`;
+        const pct = ((item.count / totalCartas) * 100).toFixed(1);
+        html += `
+            <div class="stat-card-item" title="${item.card.name} (${pct}%)">
+                <img src="${imgUrl}" loading="lazy">
+                <span class="stat-card-pct">${pct}%</span>
+            </div>`;
+    });
+    html += `</div>`;
+
+    content.innerHTML = html;
+}
+
+// CÁLCULO DE PROBABILIDADE
 document.getElementById('btn-calculate').addEventListener('click', () => {
     const handSize = parseInt(document.getElementById('hand-size').value);
     const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
@@ -486,7 +528,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
         let cardsHTML = '';
         maoExemplo.forEach(item => {
-            // CORREÇÃO: Puxa do Proxy Cache local do servidor backend
+            // Puxa do Proxy Cache local do servidor backend
             const imgUrl = item.card && item.card.id 
                 ? `http://localhost:3000/api/imagem-carta?id=${item.card.id}` 
                 : 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
@@ -524,6 +566,8 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             Simulação estatística realizada sobre 100.000 mãos possíveis de ${handSize} cartas tiradas do seu deck de ${linearDeck.length} cartas.
         </span>
     `;
+
+    atualizarPainelEstatisticas();
     
     resultBox.scrollIntoView({ behavior: 'smooth' });
 });
