@@ -8,7 +8,7 @@ async function carregarBanco() {
     
     try {
         console.log("Enviando requisição GET para /api/cartas...");
-        const res = await fetch('http://localhost:3000/api/cartas'); // Forçando o endereço completo para evitar erros de rota relativa
+        const res = await fetch('http://localhost:3000/api/cartas');
         
         if (!res.ok) {
             throw new Error(`Resposta do servidor não foi amigável: ${res.status}`);
@@ -17,10 +17,14 @@ async function carregarBanco() {
         bancoCartas = await res.json();
         console.log("Sucesso ao carregar banco local do backend!", bancoCartas.length);
         statusLabel.textContent = `Banco carregado com ${bancoCartas.length} cartas.`;
-        statusLabel.style.color = "#22c55e"; // Verde para sucesso
+        statusLabel.style.color = "#22c55e";
+
+        // Tenta recuperar o deck salvo no localStorage após o banco de dados estar pronto
+        recuperarSessaoDecks();
+
     } catch (err) {
         statusLabel.textContent = "Erro de conexão. Clique no botão de sincronizar para forçar.";
-        statusLabel.style.color = "#ef4444"; // Vermelho para erro
+        statusLabel.style.color = "#ef4444";
         console.error("Erro detalhado no frontend ao carregar o banco:", err);
     }
 }
@@ -29,7 +33,7 @@ async function carregarBanco() {
 document.getElementById('btn-sync').addEventListener('click', async () => {
     const statusLabel = document.getElementById('db-status');
     statusLabel.textContent = "Sincronizando banco remoto (isso pode demorar alguns segundos)...";
-    statusLabel.style.color = "#ca8a04"; // Amarelo
+    statusLabel.style.color = "#ca8a04";
     
     try {
         console.log("Enviando POST para /api/cartas/sincronizar...");
@@ -42,7 +46,6 @@ document.getElementById('btn-sync').addEventListener('click', async () => {
         const data = await res.json();
         console.log("Sincronização manual completada!", data);
         
-        // Recarrega o banco após sincronizar
         await carregarBanco();
     } catch (err) {
         statusLabel.textContent = "Erro ao forçar sincronização.";
@@ -106,10 +109,32 @@ function processarYDK(conteudo) {
         }
     }
 
+    salvarSessaoDecks();
     renderizarWorkspace();
 }
 
+// Salva o deck atual e suas marcações no LocalStorage
+function salvarSessaoDecks() {
+    localStorage.setItem('ygo_deck_atual', JSON.stringify(deckAtual));
+}
+
+// Recupera a sessão do LocalStorage
+function recuperarSessaoDecks() {
+    const deckSalvo = localStorage.getItem('ygo_deck_atual');
+    if (deckSalvo) {
+        try {
+            deckAtual = JSON.parse(deckSalvo);
+            console.log("Sessão recuperada com sucesso!", deckAtual.length, "cartas.");
+            renderizarWorkspace();
+        } catch (e) {
+            console.error("Erro ao ler dados salvos no cache:", e);
+        }
+    }
+}
+
 function renderizarWorkspace() {
+    if (deckAtual.length === 0) return;
+
     const workspace = document.getElementById('deck-workspace');
     workspace.classList.remove('hidden');
 
@@ -151,6 +176,7 @@ window.setRole = function(index, role) {
     } else {
         deckAtual[index].role = role;
     }
+    salvarSessaoDecks(); // Salva a alteração imediatamente
     renderizarWorkspace();
 };
 
@@ -165,6 +191,21 @@ function atualizarContadoresRoles() {
     document.getElementById('total-starters').textContent = starters;
     document.getElementById('total-extenders').textContent = extenders;
     document.getElementById('total-bricks').textContent = bricks;
+}
+
+// Retorna uma mensagem amigável e cor baseada na porcentagem
+function obterFeedbackVisual(probabilidade) {
+    if (probabilidade >= 85) {
+        return { text: "Excelente! Seu deck é extremamente consistente.", color: "#22c55e" };
+    } else if (probabilidade >= 70) {
+        return { text: "Bom! Mão bem consistente na maioria dos duelos.", color: "#a3e635" };
+    } else if (probabilidade >= 50) {
+        return { text: "Regular. Pode sofrer com 'bricadas' ou falta de follow-up ocasionalmente.", color: "#eab308" };
+    } else if (probabilidade >= 30) {
+        return { text: "Inconsistente. Recomendo aumentar o número de Starters/Extenders ou remover Bricks.", color: "#f97316" };
+    } else {
+        return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
+    }
 }
 
 // CÁLCULO DE PROBABILIDADE (Monte Carlo)
@@ -214,11 +255,24 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
     const probabilidade = (sucessos / RUNS) * 100;
 
+    // Feedback Visual e Amigável
+    const feedback = obterFeedbackVisual(probabilidade);
     const resultBox = document.getElementById('result-box');
+    const percentageText = document.getElementById('calc-percentage');
+    
     resultBox.classList.remove('hidden');
-    document.getElementById('calc-percentage').textContent = `${probabilidade.toFixed(2)}%`;
-    document.getElementById('calc-details').textContent = 
-        `Após simular 100.000 mãos possíveis de ${handSize} cartas do seu deck de ${linearDeck.length} cartas.`;
+    percentageText.textContent = `${probabilidade.toFixed(2)}%`;
+    percentageText.style.color = feedback.color; // Ajusta a cor do texto do número dinamicamente
+    
+    document.getElementById('calc-details').innerHTML = `
+        <strong>${feedback.text}</strong><br>
+        <span style="font-size: 0.9rem; color: #8d8d99; display: block; margin-top: 8px;">
+            Simulação realizada sobre 100.000 mãos possíveis de ${handSize} cartas tiradas do seu deck de ${linearDeck.length} cartas.
+        </span>
+    `;
+    
+    // Rola a tela até o resultado suavemente
+    resultBox.scrollIntoView({ behavior: 'smooth' });
 });
 
 // Inicialização imediata
