@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yu-Gi-Oh! Probability Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Yu-Gi-Oh! Probability Calculator</h1>
+        <div class="db-controls">
+            <button id="btn-sync" class="btn">Sincronizar Banco Local</button>
+            <span id="db-status">Carregando banco de dados...</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="card upload-section">
+            <h2>Importar Deck (.ydk)</h2>
+            <div class="file-input-wrapper">
+                <input type="file" id="ydk-file" accept=".ydk" />
+            </div>
+        </section>
+
+        <section id="deck-workspace" class="deck-workspace hidden">
+            <div class="workspace-grid">
+                
+                <div class="card-list-wrapper card">
+                    <h3>Cartas no Deck (<span id="deck-size">0</span>)</h3>
+                    <div id="deck-list" class="deck-list"></div>
+                </div>
+
+                <div class="calc-panel card">
+                    <h3>Configurações de Mão</h3>
+                    
+                    <div class="input-group">
+                        <label for="hand-size">Tamanho da Mão Inicial:</label>
+                        <select id="hand-size">
+                            <option value="5" selected>5 cartas (1º Turno)</option>
+                            <option value="6">6 cartas (2º Turno)</option>
+                        </select>
+                    </div>
+
+                    <hr>
+
+                    <h4>Condições de Sucesso</h4>
+                    <p class="instruction">Defina as quantidades mínimas necessárias para a mão ser considerada válida:</p>
+
+                    <div class="condition-inputs">
+                        <div class="input-group row">
+                            <label>Mínimo Starters (Total no Deck: <span id="total-starters">0</span>):</label>
+                            <input type="number" id="cond-starters" min="0" value="1">
+                        </div>
+                        <div class="input-group row">
+                            <label>Mínimo Extenders (Total no Deck: <span id="total-extenders">0</span>):</label>
+                            <input type="number" id="cond-extenders" min="0" value="1">
+                        </div>
+                        <div class="input-group row">
+                            <label>Máximo Bricks (Total no Deck: <span id="total-bricks">0</span>):</label>
+                            <input type="number" id="cond-bricks" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <button id="btn-calculate" class="btn btn-primary">Calcular Probabilidade</button>
+
+                    <div id="result-box" class="result-box hidden">
+                        <h3>Resultado</h3>
+                        <div class="percentage" id="calc-percentage">0.00%</div>
+                        <p id="calc-details"></p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

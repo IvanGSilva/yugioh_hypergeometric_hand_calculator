@@ -1,0 +1,185 @@
+:root {
+    --bg-color: #121214;
+    --card-bg: #202024;
+    --primary: #ca8a04;
+    --primary-hover: #a16207;
+    --text: #e1e1e6;
+    --text-muted: #8d8d99;
+    --border: #323238;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1, h2, h3, h4 {
+    margin: 0;
+    color: #fff;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.btn {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-primary {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+/* Workspace layout */
+.workspace-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .workspace-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Card list styling */
+.deck-list {
+    max-height: 600px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.deck-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+}
+
+.deck-item img {
+    width: 45px;
+    height: auto;
+    border-radius: 4px;
+}
+
+.deck-item-info {
+    flex-grow: 1;
+}
+
+.deck-item-name {
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.deck-item-type {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Card classification selectors */
+.classification-selectors {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.class-btn {
+    border: 1px solid var(--border);
+    background: #29292e;
+    color: var(--text-muted);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.class-btn.active-starter { background-color: #22c55e; color: white; border-color: #22c55e; }
+.class-btn.active-extender { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+.class-btn.active-brick { background-color: #ef4444; color: white; border-color: #ef4444; }
+
+/* Calculadora Panel */
+.input-group {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group.row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.input-group select, .input-group input {
+    background: #121214;
+    border: 1px solid var(--border);
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.input-group input[type="number"] {
+    width: 60px;
+    text-align: center;
+}
+
+.result-box {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: #1a1a1e;
+    border-left: 4px solid var(--primary);
+    text-align: center;
+    border-radius: 4px;
+}
+
+.percentage {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #22c55e;
+    margin: 0.5rem 0;
+}
