@@ -90,7 +90,7 @@ function processarYDK(conteudo) {
             deckAtual.push({
                 card: cardInfo,
                 count: count,
-                roles: [] // Lista ordenada de prioridade de marcações
+                roles: []
             });
         } else {
             deckAtual.push({
@@ -140,13 +140,11 @@ function renderizarWorkspace() {
         
         const imageUrl = item.card.image || 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
         
-        // Verifica se os papéis estão ativos
         const hasStarter = item.roles.includes('starter');
         const hasExtender = item.roles.includes('extender');
         const hasNonEngine = item.roles.includes('nonengine');
         const hasBrick = item.roles.includes('brick');
 
-        // Renderiza a lista de prioridade visual com botões para reordenar
         let priorityHTML = '';
         if (item.roles.length > 0) {
             priorityHTML = `
@@ -190,15 +188,14 @@ function renderizarWorkspace() {
     atualizarContadoresRoles();
 }
 
-// Ativa/Desativa marcações e coloca no final da fila de prioridade
 window.toggleRole = function(index, role) {
     const roles = deckAtual[index].roles || [];
     const roleIdx = roles.indexOf(role);
 
     if (roleIdx > -1) {
-        roles.splice(roleIdx, 1); // Remove se já existia
+        roles.splice(roleIdx, 1);
     } else {
-        roles.push(role); // Adiciona no final da lista de prioridade
+        roles.push(role);
     }
 
     deckAtual[index].roles = roles;
@@ -206,7 +203,6 @@ window.toggleRole = function(index, role) {
     renderizarWorkspace();
 };
 
-// Move a prioridade das flags para esquerda ou direita
 window.moverPrioridade = function(cardIndex, roleIndex, direcao) {
     const roles = deckAtual[cardIndex].roles;
     const targetIndex = roleIndex + direcao;
@@ -225,8 +221,6 @@ function atualizarContadoresRoles() {
     let starters = 0, extenders = 0, nonengines = 0, bricks = 0;
     
     deckAtual.forEach(item => {
-        // Para contagem estatística geral do topo do painel, 
-        // se a carta tem o papel atribuído, ela soma no total bruto daquela categoria.
         if (item.roles.includes('starter')) starters += item.count;
         if (item.roles.includes('extender')) extenders += item.count;
         if (item.roles.includes('nonengine')) nonengines += item.count;
@@ -247,7 +241,7 @@ function obterFeedbackVisual(probabilidade) {
     return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
 }
 
-// CÁLCULO DE PROBABILIDADE COM REGRAS DE PRIORIDADE MULTI-ROLE
+// CÁLCULO DE PROBABILIDADE COM AS REGRAS DE PRIORIDADE E REGRA NON-ENGINE = BRICK
 document.getElementById('btn-calculate').addEventListener('click', () => {
     const handSize = parseInt(document.getElementById('hand-size').value);
     const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
@@ -255,11 +249,10 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     const reqNonEngine = parseInt(document.getElementById('cond-nonengine').value) || 0;
     const maxBricks = parseInt(document.getElementById('cond-bricks').value) ?? 99;
 
-    // Constrói o deck linear onde cada elemento é uma lista de papéis em ordem de prioridade
     const linearDeck = [];
     deckAtual.forEach(item => {
         for (let i = 0; i < item.count; i++) {
-            linearDeck.push([...item.roles]); // Clona a lista de prioridades de cada carta
+            linearDeck.push([...item.roles]);
         }
     });
 
@@ -272,7 +265,6 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     let sucessos = 0;
 
     for (let s = 0; s < RUNS; s++) {
-        // Embaralha
         const sample = [...linearDeck];
         const maoDesejada = [];
 
@@ -282,42 +274,32 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             sample[i] = sample[randIndex];
             sample[randIndex] = temp;
             
-            // Cada carta na mão terá sua lista de possíveis papéis em ordem de preferência
             maoDesejada.push(sample[i]); 
         }
 
-        // --- RESOLUÇÃO DE MULTI-ROLE COM PRIORIDADE ---
-        // Para resolver com precisão matemática, tentamos preencher os requisitos mínimos
-        // na ordem das preferências que o usuário determinou para cada carta individual da mão.
         let startersSatisfeitos = 0;
         let extendersSatisfeitos = 0;
         let nonengineSatisfeitos = 0;
         let bricksDetectados = 0;
 
-        // Passos para verificação de mão:
-        // 1. Identificamos se as cartas são Bricks. Se uma carta possui "brick" na sua lista de marcas,
-        // ela sempre conta como um Brick para fins de penalidade máxima (para segurança do cálculo).
+        // 1. REGRA: Toda non-engine e todo brick tradicional incrementam bricksDetectados
         maoDesejada.forEach(roles => {
-            if (roles.includes('brick')) {
+            if (roles.includes('brick') || roles.includes('nonengine')) {
                 bricksDetectados++;
             }
         });
 
-        // 2. Para as demais cartas de múltipla função, fazemos um mapeamento ganancioso (Greedy)
-        // baseado nas preferências de prioridade do usuário para preencher os requisitos de mão:
+        // 2. Resolvemos os papéis ativos usando o sistema de prioridades (Greedy)
+        // Removemos o 'brick' do pool de utilidade ativa de combo da simulação
         let cartasDisponiveis = maoDesejada.map(roles => ({
-            rolesSemBrick: roles.filter(r => r !== 'brick'),
+            rolesSemBrick: roles.filter(r => r !== 'brick'), 
             usadaComo: null
         }));
 
-        // Tentamos preencher primeiro o requisito de Starters, depois Extenders, depois Non-Engine
-        // respeitando a ordem prioritária definida em cada carta.
-        
-        // Loop de Alocação de papéis das cartas da mão:
         cartasDisponiveis.forEach(carta => {
             if (carta.rolesSemBrick.length === 0) return;
             
-            // A carta assume o papel de maior prioridade dela (índice 0)
+            // Assume o papel de maior prioridade definido pelo usuário
             carta.usadaComo = carta.rolesSemBrick[0];
             
             if (carta.usadaComo === 'starter') startersSatisfeitos++;
@@ -325,7 +307,9 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             else if (carta.usadaComo === 'nonengine') nonengineSatisfeitos++;
         });
 
-        // Se passarmos na condição mínima exigida pelo usuário:
+        // 3. Verifica condições de sucesso
+        // Como o deck linear pode ter cartas neutras (sem marcas), os espaços não satisfeitos por elas
+        // não bloqueiam o sucesso da mão, cumprindo o critério de "tanto faz o resto".
         if (startersSatisfeitos >= reqStarters && 
             extendersSatisfeitos >= reqExtenders && 
             nonengineSatisfeitos >= reqNonEngine && 
