@@ -7,7 +7,7 @@ async function carregarBanco() {
     statusLabel.textContent = "Solicitando dados ao servidor backend...";
     
     try {
-        console.log("Enviando requisição GET para /api/cartas...");
+        // console.log("Enviando requisição GET para /api/cartas...");
         const res = await fetch('http://localhost:3000/api/cartas');
         
         if (!res.ok) {
@@ -15,7 +15,7 @@ async function carregarBanco() {
         }
         
         bancoCartas = await res.json();
-        console.log("Sucesso ao carregar banco local do backend!", bancoCartas.length);
+        // console.log("Sucesso ao carregar banco local do backend!", bancoCartas.length);
         statusLabel.textContent = `Banco carregado com ${bancoCartas.length} cartas.`;
         statusLabel.style.color = "#22c55e";
 
