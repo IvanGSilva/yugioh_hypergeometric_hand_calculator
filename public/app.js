@@ -1,5 +1,5 @@
 let bancoCartas = [];
-let deckAtual = []; // Guarda objetos: { card, count, role: 'starter'|'extender'|'brick'|'none' }
+let deckAtual = []; // Guarda objetos: { card, count, roles: ['extender', 'starter'] }
 
 // Carrega Banco Local do Backend ao iniciar
 async function carregarBanco() {
@@ -19,7 +19,6 @@ async function carregarBanco() {
         statusLabel.textContent = `Banco carregado com ${bancoCartas.length} cartas.`;
         statusLabel.style.color = "#22c55e";
 
-        // Tenta recuperar o deck salvo no localStorage após o banco de dados estar pronto
         recuperarSessaoDecks();
 
     } catch (err) {
@@ -36,21 +35,14 @@ document.getElementById('btn-sync').addEventListener('click', async () => {
     statusLabel.style.color = "#ca8a04";
     
     try {
-        console.log("Enviando POST para /api/cartas/sincronizar...");
         const res = await fetch('http://localhost:3000/api/cartas/sincronizar', { method: 'POST' });
-        
-        if (!res.ok) {
-            throw new Error(`Falha na rota de sincronização: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        console.log("Sincronização manual completada!", data);
+        if (!res.ok) throw new Error(`Falha na rota de sincronização: ${res.status}`);
         
         await carregarBanco();
     } catch (err) {
         statusLabel.textContent = "Erro ao forçar sincronização.";
         statusLabel.style.color = "#ef4444";
-        console.error("Erro ao sincronizar manualmente no frontend:", err);
+        console.error(err);
     }
 });
 
@@ -98,13 +90,13 @@ function processarYDK(conteudo) {
             deckAtual.push({
                 card: cardInfo,
                 count: count,
-                role: 'none'
+                roles: [] // Lista ordenada de prioridade de marcações
             });
         } else {
             deckAtual.push({
                 card: { id, name: `ID Não Localizado (${id})`, type: 'Desconhecido', image: '' },
                 count: count,
-                role: 'none'
+                roles: []
             });
         }
     }
@@ -113,21 +105,18 @@ function processarYDK(conteudo) {
     renderizarWorkspace();
 }
 
-// Salva o deck atual e suas marcações no LocalStorage
 function salvarSessaoDecks() {
-    localStorage.setItem('ygo_deck_atual', JSON.stringify(deckAtual));
+    localStorage.setItem('ygo_deck_atual_v2', JSON.stringify(deckAtual));
 }
 
-// Recupera a sessão do LocalStorage
 function recuperarSessaoDecks() {
-    const deckSalvo = localStorage.getItem('ygo_deck_atual');
+    const deckSalvo = localStorage.getItem('ygo_deck_atual_v2');
     if (deckSalvo) {
         try {
             deckAtual = JSON.parse(deckSalvo);
-            console.log("Sessão recuperada com sucesso!", deckAtual.length, "cartas.");
             renderizarWorkspace();
         } catch (e) {
-            console.error("Erro ao ler dados salvos no cache:", e);
+            console.error("Erro ao recuperar sessão:", e);
         }
     }
 }
@@ -150,6 +139,35 @@ function renderizarWorkspace() {
         itemDiv.className = 'deck-item';
         
         const imageUrl = item.card.image || 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
+        
+        // Verifica se os papéis estão ativos
+        const hasStarter = item.roles.includes('starter');
+        const hasExtender = item.roles.includes('extender');
+        const hasNonEngine = item.roles.includes('nonengine');
+        const hasBrick = item.roles.includes('brick');
+
+        // Renderiza a lista de prioridade visual com botões para reordenar
+        let priorityHTML = '';
+        if (item.roles.length > 0) {
+            priorityHTML = `
+                <div class="priority-container">
+                    <span class="priority-title">Prioridade:</span>
+                    <div class="priority-list">
+                        ${item.roles.map((role, rIdx) => {
+                            let label = role.charAt(0).toUpperCase() + role.slice(1);
+                            if (role === 'nonengine') label = "Non-Engine";
+                            return `
+                                <span class="priority-badge badge-${role}">
+                                    ${rIdx > 0 ? `<button class="priority-arrow" onclick="moverPrioridade(${index}, ${rIdx}, -1)">◀</button>` : ''}
+                                    ${label}
+                                    ${rIdx < item.roles.length - 1 ? `<button class="priority-arrow" onclick="moverPrioridade(${index}, ${rIdx}, 1)">▶</button>` : ''}
+                                </span>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         itemDiv.innerHTML = `
             <img src="${imageUrl}" alt="${item.card.name}">
@@ -157,10 +175,12 @@ function renderizarWorkspace() {
                 <div class="deck-item-name">${item.card.name} x${item.count}</div>
                 <div class="deck-item-type">${item.card.type}</div>
                 <div class="classification-selectors">
-                    <button class="class-btn ${item.role === 'starter' ? 'active-starter' : ''}" onclick="setRole(${index}, 'starter')">Starter</button>
-                    <button class="class-btn ${item.role === 'extender' ? 'active-extender' : ''}" onclick="setRole(${index}, 'extender')">Extender</button>
-                    <button class="class-btn ${item.role === 'brick' ? 'active-brick' : ''}" onclick="setRole(${index}, 'brick')">Brick</button>
+                    <button class="class-btn ${hasStarter ? 'active-starter' : ''}" onclick="toggleRole(${index}, 'starter')">Starter</button>
+                    <button class="class-btn ${hasExtender ? 'active-extender' : ''}" onclick="toggleRole(${index}, 'extender')">Extender</button>
+                    <button class="class-btn ${hasNonEngine ? 'active-nonengine' : ''}" onclick="toggleRole(${index}, 'nonengine')">Non-Engine</button>
+                    <button class="class-btn ${hasBrick ? 'active-brick' : ''}" onclick="toggleRole(${index}, 'brick')">Brick</button>
                 </div>
+                ${priorityHTML}
             </div>
         `;
         listContainer.appendChild(itemDiv);
@@ -170,55 +190,76 @@ function renderizarWorkspace() {
     atualizarContadoresRoles();
 }
 
-window.setRole = function(index, role) {
-    if (deckAtual[index].role === role) {
-        deckAtual[index].role = 'none';
+// Ativa/Desativa marcações e coloca no final da fila de prioridade
+window.toggleRole = function(index, role) {
+    const roles = deckAtual[index].roles || [];
+    const roleIdx = roles.indexOf(role);
+
+    if (roleIdx > -1) {
+        roles.splice(roleIdx, 1); // Remove se já existia
     } else {
-        deckAtual[index].role = role;
+        roles.push(role); // Adiciona no final da lista de prioridade
     }
-    salvarSessaoDecks(); // Salva a alteração imediatamente
+
+    deckAtual[index].roles = roles;
+    salvarSessaoDecks();
+    renderizarWorkspace();
+};
+
+// Move a prioridade das flags para esquerda ou direita
+window.moverPrioridade = function(cardIndex, roleIndex, direcao) {
+    const roles = deckAtual[cardIndex].roles;
+    const targetIndex = roleIndex + direcao;
+
+    if (targetIndex >= 0 && targetIndex < roles.length) {
+        const temp = roles[roleIndex];
+        roles[roleIndex] = roles[targetIndex];
+        roles[targetIndex] = temp;
+    }
+
+    salvarSessaoDecks();
     renderizarWorkspace();
 };
 
 function atualizarContadoresRoles() {
-    let starters = 0, extenders = 0, bricks = 0;
+    let starters = 0, extenders = 0, nonengines = 0, bricks = 0;
+    
     deckAtual.forEach(item => {
-        if (item.role === 'starter') starters += item.count;
-        if (item.role === 'extender') extenders += item.count;
-        if (item.role === 'brick') bricks += item.count;
+        // Para contagem estatística geral do topo do painel, 
+        // se a carta tem o papel atribuído, ela soma no total bruto daquela categoria.
+        if (item.roles.includes('starter')) starters += item.count;
+        if (item.roles.includes('extender')) extenders += item.count;
+        if (item.roles.includes('nonengine')) nonengines += item.count;
+        if (item.roles.includes('brick')) bricks += item.count;
     });
 
     document.getElementById('total-starters').textContent = starters;
     document.getElementById('total-extenders').textContent = extenders;
+    document.getElementById('total-nonengine').textContent = nonengines;
     document.getElementById('total-bricks').textContent = bricks;
 }
 
-// Retorna uma mensagem amigável e cor baseada na porcentagem
 function obterFeedbackVisual(probabilidade) {
-    if (probabilidade >= 85) {
-        return { text: "Excelente! Seu deck é extremamente consistente.", color: "#22c55e" };
-    } else if (probabilidade >= 70) {
-        return { text: "Bom! Mão bem consistente na maioria dos duelos.", color: "#a3e635" };
-    } else if (probabilidade >= 50) {
-        return { text: "Regular. Pode sofrer com 'bricadas' ou falta de follow-up ocasionalmente.", color: "#eab308" };
-    } else if (probabilidade >= 30) {
-        return { text: "Inconsistente. Recomendo aumentar o número de Starters/Extenders ou remover Bricks.", color: "#f97316" };
-    } else {
-        return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
-    }
+    if (probabilidade >= 85) return { text: "Excelente! Seu deck é extremamente consistente.", color: "#22c55e" };
+    if (probabilidade >= 70) return { text: "Bom! Mão bem consistente na maioria dos duelos.", color: "#a3e635" };
+    if (probabilidade >= 50) return { text: "Regular. Pode sofrer com 'bricadas' ou falta de follow-up ocasionalmente.", color: "#eab308" };
+    if (probabilidade >= 30) return { text: "Inconsistente. Recomendo ajustar as taxas do deck.", color: "#f97316" };
+    return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
 }
 
-// CÁLCULO DE PROBABILIDADE (Monte Carlo)
+// CÁLCULO DE PROBABILIDADE COM REGRAS DE PRIORIDADE MULTI-ROLE
 document.getElementById('btn-calculate').addEventListener('click', () => {
     const handSize = parseInt(document.getElementById('hand-size').value);
-    const minStarters = parseInt(document.getElementById('cond-starters').value) || 0;
-    const minExtenders = parseInt(document.getElementById('cond-extenders').value) || 0;
+    const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
+    const reqExtenders = parseInt(document.getElementById('cond-extenders').value) || 0;
+    const reqNonEngine = parseInt(document.getElementById('cond-nonengine').value) || 0;
     const maxBricks = parseInt(document.getElementById('cond-bricks').value) ?? 99;
 
+    // Constrói o deck linear onde cada elemento é uma lista de papéis em ordem de prioridade
     const linearDeck = [];
     deckAtual.forEach(item => {
         for (let i = 0; i < item.count; i++) {
-            linearDeck.push(item.role);
+            linearDeck.push([...item.roles]); // Clona a lista de prioridades de cada carta
         }
     });
 
@@ -231,38 +272,77 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     let sucessos = 0;
 
     for (let s = 0; s < RUNS; s++) {
+        // Embaralha
         const sample = [...linearDeck];
-        let numStarters = 0;
-        let numExtenders = 0;
-        let numBricks = 0;
+        const maoDesejada = [];
 
         for (let i = 0; i < handSize; i++) {
             const randIndex = i + Math.floor(Math.random() * (sample.length - i));
             const temp = sample[i];
             sample[i] = sample[randIndex];
             sample[randIndex] = temp;
-
-            const cardRole = sample[i];
-            if (cardRole === 'starter') numStarters++;
-            else if (cardRole === 'extender') numExtenders++;
-            else if (cardRole === 'brick') numBricks++;
+            
+            // Cada carta na mão terá sua lista de possíveis papéis em ordem de preferência
+            maoDesejada.push(sample[i]); 
         }
 
-        if (numStarters >= minStarters && numExtenders >= minExtenders && numBricks <= maxBricks) {
+        // --- RESOLUÇÃO DE MULTI-ROLE COM PRIORIDADE ---
+        // Para resolver com precisão matemática, tentamos preencher os requisitos mínimos
+        // na ordem das preferências que o usuário determinou para cada carta individual da mão.
+        let startersSatisfeitos = 0;
+        let extendersSatisfeitos = 0;
+        let nonengineSatisfeitos = 0;
+        let bricksDetectados = 0;
+
+        // Passos para verificação de mão:
+        // 1. Identificamos se as cartas são Bricks. Se uma carta possui "brick" na sua lista de marcas,
+        // ela sempre conta como um Brick para fins de penalidade máxima (para segurança do cálculo).
+        maoDesejada.forEach(roles => {
+            if (roles.includes('brick')) {
+                bricksDetectados++;
+            }
+        });
+
+        // 2. Para as demais cartas de múltipla função, fazemos um mapeamento ganancioso (Greedy)
+        // baseado nas preferências de prioridade do usuário para preencher os requisitos de mão:
+        let cartasDisponiveis = maoDesejada.map(roles => ({
+            rolesSemBrick: roles.filter(r => r !== 'brick'),
+            usadaComo: null
+        }));
+
+        // Tentamos preencher primeiro o requisito de Starters, depois Extenders, depois Non-Engine
+        // respeitando a ordem prioritária definida em cada carta.
+        
+        // Loop de Alocação de papéis das cartas da mão:
+        cartasDisponiveis.forEach(carta => {
+            if (carta.rolesSemBrick.length === 0) return;
+            
+            // A carta assume o papel de maior prioridade dela (índice 0)
+            carta.usadaComo = carta.rolesSemBrick[0];
+            
+            if (carta.usadaComo === 'starter') startersSatisfeitos++;
+            else if (carta.usadaComo === 'extender') extendersSatisfeitos++;
+            else if (carta.usadaComo === 'nonengine') nonengineSatisfeitos++;
+        });
+
+        // Se passarmos na condição mínima exigida pelo usuário:
+        if (startersSatisfeitos >= reqStarters && 
+            extendersSatisfeitos >= reqExtenders && 
+            nonengineSatisfeitos >= reqNonEngine && 
+            bricksDetectados <= maxBricks) {
             sucessos++;
         }
     }
 
     const probabilidade = (sucessos / RUNS) * 100;
 
-    // Feedback Visual e Amigável
     const feedback = obterFeedbackVisual(probabilidade);
     const resultBox = document.getElementById('result-box');
     const percentageText = document.getElementById('calc-percentage');
     
     resultBox.classList.remove('hidden');
     percentageText.textContent = `${probabilidade.toFixed(2)}%`;
-    percentageText.style.color = feedback.color; // Ajusta a cor do texto do número dinamicamente
+    percentageText.style.color = feedback.color;
     
     document.getElementById('calc-details').innerHTML = `
         <strong>${feedback.text}</strong><br>
@@ -271,9 +351,8 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         </span>
     `;
     
-    // Rola a tela até o resultado suavemente
     resultBox.scrollIntoView({ behavior: 'smooth' });
 });
 
-// Inicialização imediata
+// Inicialização
 carregarBanco();

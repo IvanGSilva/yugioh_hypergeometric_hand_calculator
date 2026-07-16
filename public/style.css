@@ -140,6 +140,60 @@ h1, h2, h3, h4 {
 .class-btn.active-starter { background-color: #22c55e; color: white; border-color: #22c55e; }
 .class-btn.active-extender { background-color: #3b82f6; color: white; border-color: #3b82f6; }
 .class-btn.active-brick { background-color: #ef4444; color: white; border-color: #ef4444; }
+.class-btn.active-nonengine { background-color: #a855f7; color: white; border-color: #a855f7; }
+
+/* Wrapper das Tags selecionadas e prioridade */
+.priority-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    background: #1a1a1e;
+    padding: 0.4rem;
+    border-radius: 4px;
+    border: 1px dashed var(--border);
+}
+
+.priority-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.priority-list {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.priority-badge.badge-starter { background-color: #22c55e; }
+.priority-badge.badge-extender { background-color: #3b82f6; }
+.priority-badge.badge-nonengine { background-color: #a855f7; }
+.priority-badge.badge-brick { background-color: #ef4444; }
+
+.priority-arrow {
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+.priority-arrow:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
 
 /* Calculadora Panel */
 .input-group {
