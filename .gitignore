@@ -1,3 +1,5 @@
 node_modules/
 assets/data/cartas.json
+assets/cache-imagens/*
+!assets/cache-imagens/.gitkeep
 .DS_Store
