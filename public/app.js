@@ -241,8 +241,8 @@ function obterFeedbackVisual(probabilidade) {
     return { text: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.", color: "#ef4444" };
 }
 
+// ALGORITMO DE VALIDAÇÃO DE MÃO (Focado apenas em metas maiores que 0)
 function testarMaoValida(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxBricks) {
-
     const maoCopiada = maoRoles.map(roles => {
         if (!Array.isArray(roles)) return [];
         return roles.map(r => {
@@ -252,6 +252,7 @@ function testarMaoValida(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxB
         });
     });
 
+    // Se maxBricks for maior que 0, validamos rigorosamente o limite de bricks
     if (maxBricks > 0) {
         let bricksDetectados = 0;
         maoCopiada.forEach(roles => {
@@ -313,18 +314,101 @@ function testarMaoValida(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxB
 
     return resolver(0, reqStarters, reqExtenders, reqNonEngine);
 }
+
+// NOVO MOTOR DE CLASSIFICAÇÃO DE MÃOS SEGUNDO AS SUAS ESPECIFICAÇÕES
+function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, maxBricks) {
+    const mao = maoRoles.map(roles => {
+        if (!Array.isArray(roles)) return [];
+        return roles.map(r => {
+            let s = String(r).toLowerCase().trim();
+            if (s === 'non-engine' || s === 'non_engine') return 'nonengine';
+            return s;
+        });
+    });
+
+    const ehValida = testarMaoValida(mao, reqStarters, reqExtenders, reqNonEngine, maxBricks);
+
+    // Contadores de presença física absoluta na mão
+    let qtdStarters = 0;
+    let qtdExtenders = 0;
+    let qtdNonEngine = 0;
+    let qtdBricks = 0;
+
+    mao.forEach(roles => {
+        if (roles.includes('starter')) qtdStarters++;
+        if (roles.includes('extender')) qtdExtenders++;
+        if (roles.includes('nonengine')) qtdNonEngine++;
+        if (roles.includes('brick')) qtdBricks++;
+    });
+
+    // --- CASO 1: MÃO NÃO CUMPRIU OS REQUISITOS COMBO ---
+    if (!ehValida) {
+        // "Uma que contenha somente non-engine e bricks"
+        const apenasNonEngineEBricks = (qtdNonEngine > 0 || qtdBricks > 0) && qtdStarters === 0 && qtdExtenders === 0;
+        // "Uma que tenha somente non-engine"
+        const apenasNonEngine = qtdNonEngine > 0 && qtdStarters === 0 && qtdExtenders === 0 && qtdBricks === 0;
+
+        if (apenasNonEngine) {
+            return { label: "Apenas Non-Engine", cor: "#c084fc" };
+        }
+        if (apenasNonEngineEBricks) {
+            return { label: "Apenas Non-Engine e Bricks", cor: "#f43f5e" };
+        }
+        return { label: "Mão Inválida (Sem Combo)", cor: "#ef4444" };
+    }
+
+    // --- CASO 2: MÃO VÁLIDA (CUMPRIU OS REQUISITOS COMBO) ---
+
+    // "Uma que cumprir os filtros das categorias mas que venha com pelo menos 1 brick"
+    if (qtdBricks > 0) {
+        return { label: "Combo Válido + Brick(s)", cor: "#fb923c" };
+    }
+
+    // "Uma que se cumprir os filtros e todas as outras cartas forem non-engine"
+    // Para descobrir as "outras cartas", removemos uma carta elegível de cada meta ativa
+    let cartasRestantes = [...mao];
+    
+    for (let i = 0; i < reqStarters; i++) {
+        const idx = cartasRestantes.findIndex(r => r.includes('starter'));
+        if (idx !== -1) cartasRestantes.splice(idx, 1);
+    }
+    for (let i = 0; i < reqExtenders; i++) {
+        const idx = cartasRestantes.findIndex(r => r.includes('extender'));
+        if (idx !== -1) cartasRestantes.splice(idx, 1);
+    }
+    for (let i = 0; i < reqNonEngine; i++) {
+        const idx = cartasRestantes.findIndex(r => r.includes('nonengine'));
+        if (idx !== -1) cartasRestantes.splice(idx, 1);
+    }
+
+    // Se sobrou alguma carta na mão e absolutamente todas as que sobraram são Non-Engines
+    const todasSobrasSaoNonEngine = cartasRestantes.length > 0 && cartasRestantes.every(roles => roles.includes('nonengine'));
+    if (todasSobrasSaoNonEngine) {
+        return { label: "Combo Perfeito + Non-Engines", cor: "#38bdf8" };
+    }
+
+    // "Uma mão com exatamente as condições de categorias"
+    // (Não tem sobras de combo e nem cartas extras com papel ativo que excedam as metas definidas)
+    const exatamenteAsCondicoes = (qtdStarters === reqStarters) && (qtdExtenders === reqExtenders) && (qtdNonEngine === reqNonEngine);
+    if (exatamenteAsCondicoes) {
+        return { label: "Mão Exata (Mínimo das Categorias)", cor: "#10b981" };
+    }
+
+    // Mão válida genérica (Exemplo: Mão com excesso de Starters/Extenders)
+    return { label: "Combo Válido (Com Excesso)", cor: "#22c55e" };
+}
+
+// Retorna a classe de estilo de borda baseada nas marcações que a carta possui
 function obterClasseBorda(roles) {
     if (!roles || roles.length === 0) return 'border-none';
-    
     if (roles.length === 1) return `border-${roles[0]}`;
-    
     if (roles.length === 2) {
         return `border-${roles[0]}-${roles[1]}`;
     }
-    
     return 'border-multi';
 }
 
+// CÁLCULO DE PROBABILIDADE COM AS NOVAS MENSAGENS E CONFIGURAÇÕES
 document.getElementById('btn-calculate').addEventListener('click', () => {
     const handSize = parseInt(document.getElementById('hand-size').value);
     const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
@@ -370,7 +454,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
     const probabilidade = (sucessos / RUNS) * 100;
 
-    // --- RENDERIZAR AS 10 MÃOS VISUAIS ---
+    // --- RENDERIZAR AS 10 MÃOS VISUAIS COM CLASSIFICAÇÃO PERSONALIZADA ---
     const handsContainer = document.getElementById('hands-container');
     handsContainer.innerHTML = '';
 
@@ -385,17 +469,17 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
             maoExemplo.push(pool[i]);
         }
 
-        // Garante que as mãos de exemplo também ganham cópias limpas e exclusivas
         const mapeamentoRolesExemplo = maoExemplo.map(item => [...item.roles]);
+        
+        // Descobre a classificação detalhada da mão de exemplo usando as metas
+        const classificacao = classificarTipoMao(mapeamentoRolesExemplo, reqStarters, reqExtenders, reqNonEngine, maxBricks);
         const ehMaoSucesso = testarMaoValida(mapeamentoRolesExemplo, reqStarters, reqExtenders, reqNonEngine, maxBricks);
         
         const handRow = document.createElement('div');
         handRow.className = 'simulated-hand-row';
-        handRow.style.borderLeft = ehMaoSucesso ? "4px solid #22c55e" : "4px solid #ef4444";
+        handRow.style.borderLeft = `4px solid ${classificacao.cor}`;
 
-        const statusMao = ehMaoSucesso 
-            ? `<span style="color: #22c55e; font-weight: bold;">[MÃO VÁLIDA]</span>` 
-            : `<span style="color: #ef4444; font-weight: bold;">[MÃO INVÁLIDA]</span>`;
+        const statusMao = `<span style="color: ${classificacao.cor}; font-weight: bold;">[${classificacao.label.toUpperCase()}]</span>`;
 
         let cardsHTML = '';
         maoExemplo.forEach(item => {
