@@ -10,6 +10,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = 3000;
 const FILE_PATH = path.join(__dirname, 'assets', 'data', 'cartas.json');
+// Definimos a pasta onde as imagens físicas das cartas ficarão salvas no seu PC
+const CACHE_IMG_DIR = path.join(__dirname, 'assets', 'cache-imagens');
 
 function garantirDiretorio(filePath) {
     const dir = path.dirname(filePath);
@@ -18,8 +20,13 @@ function garantirDiretorio(filePath) {
     }
 }
 
+// Garante que a pasta de cache de imagens exista logo na inicialização
+if (!fs.existsSync(CACHE_IMG_DIR)) {
+    fs.mkdirSync(CACHE_IMG_DIR, { recursive: true });
+}
+
 async function sincronizarDadosComAPI() {
-    console.log("Iniciando requisição para a API do YGOPRODec;k...")
+    console.log("Iniciando requisição para a API do YGOPRODeck...")
     
     try {
         const resposta = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php');
@@ -72,6 +79,45 @@ async function sincronizarDadosComAPI() {
         throw erro;
     }
 }
+
+// --- NOVA ROTA: PROXY CACHE DE IMAGENS ---
+app.get('/api/imagem-carta', async (req, res) => {
+    const { id } = req.query;
+    if (!id || !/^\d+$/.test(id)) {
+        return res.status(400).json({ erro: "ID numérico de carta inválido ou ausente." });
+    }
+
+    const localImagePath = path.join(CACHE_IMG_DIR, `${id}.jpg`);
+
+    // 1. Se a imagem já existe no seu HD, serve ela instantaneamente (0 requisições externas!)
+    if (fs.existsSync(localImagePath)) {
+        return res.sendFile(localImagePath);
+    }
+
+    // 2. Se não existir no cache local, busca da API do YGOPRODeck, salva localmente e serve
+    try {
+        console.log(`[Cache Miss] Baixando imagem da carta ${id} pela primeira vez...`);
+        const remoteUrl = `https://images.ygoprodeck.com/images/cards_small/${id}.jpg`;
+        
+        const response = await fetch(remoteUrl);
+        if (!response.ok) {
+            throw new Error(`Servidor de imagens retornou status ${response.status}`);
+        }
+
+        // Transforma a resposta do fetch em um buffer e grava no arquivo físico
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        fs.writeFileSync(localImagePath, buffer);
+
+        console.log(`[Cache Save] Imagem da carta ${id} salva localmente.`);
+        return res.sendFile(localImagePath);
+
+    } catch (erro) {
+        console.error(`Falha ao recuperar a imagem para a carta ${id}:`, erro.message);
+        // Em caso de falha, redireciona o navegador para um placeholder público
+        return res.redirect('https://images.ygoprodeck.com/images/cards/placeholder.jpg');
+    }
+});
 
 // Retorna o banco de dados
 app.get('/api/cartas', async (req, res) => {

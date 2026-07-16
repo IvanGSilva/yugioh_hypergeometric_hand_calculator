@@ -69,7 +69,7 @@ function processarYDK(conteudo) {
             naMainDeck = true;
             continue;
         }
-        if (linha.startsWith('#extra') || linha.startsWith('!side')) {
+        if (linha.startsWith('#extra') || inline.startsWith('!side')) {
             naMainDeck = false;
             continue;
         }
@@ -138,7 +138,10 @@ function renderizarWorkspace() {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'deck-item';
         
-        const imageUrl = item.card.image || 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
+        // CORREÇÃO: Puxa do Proxy Cache local do servidor backend
+        const imageUrl = item.card && item.card.id 
+            ? `http://localhost:3000/api/imagem-carta?id=${item.card.id}` 
+            : 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
         
         const hasStarter = item.roles.includes('starter');
         const hasExtender = item.roles.includes('extender');
@@ -168,7 +171,7 @@ function renderizarWorkspace() {
         }
 
         itemDiv.innerHTML = `
-            <img src="${imageUrl}" alt="${item.card.name}">
+            <img src="${imageUrl}" alt="${item.card.name}" loading="lazy">
             <div class="deck-item-info">
                 <div class="deck-item-name">${item.card.name} x${item.count}</div>
                 <div class="deck-item-type">${item.card.type}</div>
@@ -483,12 +486,16 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
         let cardsHTML = '';
         maoExemplo.forEach(item => {
-            const imgUrl = item.card.image || 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
+            // CORREÇÃO: Puxa do Proxy Cache local do servidor backend
+            const imgUrl = item.card && item.card.id 
+                ? `http://localhost:3000/api/imagem-carta?id=${item.card.id}` 
+                : 'https://images.ygoprodeck.com/images/cards/placeholder.jpg';
+                
             const borderClass = obterClasseBorda(item.roles);
 
             cardsHTML += `
                 <div class="hand-card-item">
-                    <img src="${imgUrl}" class="${borderClass}" title="${item.card.name}">
+                    <img src="${imgUrl}" class="${borderClass}" title="${item.card.name}" loading="lazy">
                     <div class="hand-card-name">${item.card.name}</div>
                 </div>
             `;
