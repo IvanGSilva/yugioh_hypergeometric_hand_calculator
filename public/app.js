@@ -16,31 +16,31 @@ async function carregarBanco() {
         
         bancoCartas = await res.json();
         // console.log("Sucesso ao carregar banco local do backend!", bancoCartas.length);
-        statusLabel.textContent = `Banco carregado com ${bancoCartas.length} cartas.`;
+        statusLabel.textContent = t('db_loaded', { count: bancoCartas.length });
         statusLabel.style.color = "#22c55e";
 
         recuperarSessaoDecks();
 
     } catch (err) {
-        statusLabel.textContent = "Erro de conexão. Clique no botão de sincronizar para forçar.";
+        statusLabel.textContent = t('db_error');
         statusLabel.style.color = "#ef4444";
-        console.error("Erro detalhado no frontend ao carregar o banco:", err);
+        console.error("Err:", err);
     }
 }
 
 // Sincroniza banco de forma forçada
 document.getElementById('btn-sync').addEventListener('click', async () => {
     const statusLabel = document.getElementById('db-status');
-    statusLabel.textContent = "Sincronizando banco remoto (isso pode demorar alguns segundos)...";
+    statusLabel.textContent = t('syncing');
     statusLabel.style.color = "#ca8a04";
     
     try {
         const res = await fetch('http://localhost:3000/api/cartas/sincronizar', { method: 'POST' });
-        if (!res.ok) throw new Error(`Falha na rota de sincronização: ${res.status}`);
+        if (!res.ok) throw new Error(t('sync_error'));
         
         await carregarBanco();
     } catch (err) {
-        statusLabel.textContent = "Erro ao forçar sincronização.";
+        statusLabel.textContent = t('sync_error');
         statusLabel.style.color = "#ef4444";
         console.error(err);
     }
@@ -332,28 +332,24 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
 
     // --- MÃO NÃO CUMPRIU OS REQUISITOS COMBO ---
     if (!ehValida) {
-        // "Uma que contenha somente non-engine e bricks"
         const apenasNonEngineEBricks = (qtdNonEngine > 0 || qtdBricks > 0) && qtdStarters === 0 && qtdExtenders === 0;
-        // "Uma que tenha somente non-engine"
         const apenasNonEngine = qtdNonEngine > 0 && qtdStarters === 0 && qtdExtenders === 0 && qtdBricks === 0;
 
         if (apenasNonEngine) {
-            return { label: "Apenas Non-Engine", cor: "#c084fc" };
+            return { label: t('label_only_nonengine'), cor: "#c084fc" };
         }
         if (apenasNonEngineEBricks) {
-            return { label: "Apenas Non-Engine e Bricks", cor: "#f43f5e" };
+            return { label: t('label_only_nonengine_bricks'), cor: "#f43f5e" };
         }
-        return { label: "Mão Inválida (Sem Combo)", cor: "#ef4444" };
+        return { label: t('label_invalid_hand'), cor: "#ef4444" };
     }
 
     // --- MÃO VÁLIDA (CUMPRIU OS REQUISITOS COMBO) ---
 
-    // "Uma que cumprir os filtros das categorias mas que venha com pelo menos 1 brick"
     if (qtdBricks > 0) {
-        return { label: "Combo Válido + Brick(s)", cor: "#fb923c" };
+        return { label: t('label_combo_brick'), cor: "#fb923c" };
     }
 
-    // "Uma que se cumprir os filtros e todas as outras cartas forem non-engine"
     let cartasRestantes = [...mao];
     
     for (let i = 0; i < reqStarters; i++) {
@@ -369,20 +365,17 @@ function classificarTipoMao(maoRoles, reqStarters, reqExtenders, reqNonEngine, m
         if (idx !== -1) cartasRestantes.splice(idx, 1);
     }
 
-    // Se sobrou alguma carta na mão e absolutamente todas as que sobraram são Non-Engines
     const todasSobrasSaoNonEngine = cartasRestantes.length > 0 && cartasRestantes.every(roles => roles.includes('nonengine'));
     if (todasSobrasSaoNonEngine) {
-        return { label: "Combo Perfeito + Non-Engines", cor: "#38bdf8" };
+        return { label: t('label_perfect_combo_nonengine'), cor: "#38bdf8" };
     }
 
-    // "Uma mão com exatamente as condições de categorias"
     const exatamenteAsCondicoes = (qtdStarters === reqStarters) && (qtdExtenders === reqExtenders) && (qtdNonEngine === reqNonEngine);
     if (exatamenteAsCondicoes) {
-        return { label: "Mão Exata (Mínimo das Categorias)", cor: "#10b981" };
+        return { label: t('label_exact_hand'), cor: "#10b981" };
     }
 
-    // Mão válida genérica (Exemplo: Mão com excesso de Starters/Extenders)
-    return { label: "Combo Válido (Com Excesso)", cor: "#22c55e" };
+    return { label: t('label_valid_combo_excess'), cor: "#22c55e" };
 }
 
 // Retorna a classe de estilo de borda baseada nas marcações que a carta possui
@@ -472,7 +465,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     });
 
     if (linearDeck.length < handSize) {
-        alert("O deck possui menos cartas do que o tamanho da mão solicitado.");
+        alert(t("err_small_deck"));
         return;
     }
 
@@ -544,7 +537,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         });
 
         handRow.innerHTML = `
-            <div class="hand-title">Mão de Exemplo #${h + 1} - ${statusMao}</div>
+            <div class="hand-title">${t("hand_label")} #${h + 1} - ${statusMao}</div>
             <div class="hand-cards">
                 ${cardsHTML}
             </div>
@@ -563,7 +556,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     document.getElementById('calc-details').innerHTML = `
         <strong>${feedback.text}</strong><br>
         <span style="font-size: 0.9rem; color: #8d8d99; display: block; margin-top: 8px;">
-            Simulação estatística realizada sobre 100.000 mãos possíveis de ${handSize} cartas tiradas do seu deck de ${linearDeck.length} cartas.
+            ${t("sim_desc")}
         </span>
     `;
 
@@ -574,3 +567,4 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
 // Inicialização
 carregarBanco();
+initI18n();
