@@ -31,7 +31,6 @@ const translations = {
         nonengine: 'Non-Engine',
         brick: 'Brick',
         err_small_deck: 'O deck possui menos cartas do que o tamanho da mão solicitado.',
-
         label_only_nonengine: "Apenas Non-Engine",
         label_only_nonengine_bricks: "Apenas Non-Engine e Bricks",
         label_invalid_hand: "Mão Ruim (Sem Combo)",
@@ -39,9 +38,14 @@ const translations = {
         label_perfect_combo_nonengine: "Combo + Non-Engines",
         label_exact_hand: "Mão Exata (Mínimo das Categorias Selecionadas)",
         label_valid_combo_excess: "Combo Válido (Com Excesso)",
-
         sim_desc: 'Simulação estatística realizada sobre {RUNS} mãos de {size} cartas do seu deck de {linearDeck.length} cartas.',
-        hand_label: 'Mão de Exemplo'
+        hand_label: 'Mão de Exemplo',
+        feedback_excellent: "Excelente! Seu deck é extremamente consistente.",
+        feedback_good: "Bom! Mão bem consistente na maioria dos duelos.",
+        feedback_regular: "Regular. Pode sofrer com 'bricadas' ou falta de follow-up ocasionalmente.",
+        feedback_bad: "Inconsistente. Recomendo ajustar as taxas do deck.",
+        feedback_very_bad: "Muito Inconsistente! Raramente você abrirá com esta combinação ideal.",
+
     },
     'en-US': {
         title: 'Yu-Gi-Oh! Probability Calculator',
@@ -80,7 +84,6 @@ const translations = {
         feedback_regular: 'Regular. You may struggle with bricks or lack of follow-up.',
         feedback_bad: 'Inconsistent. I recommend adjusting your deck ratios.',
         feedback_very_bad: 'Very Inconsistent! You will rarely open your ideal hand.',
-        
         label_only_nonengine: "Non-Engine Only",
         label_only_nonengine_bricks: "Only Non-Engine and Bricks",
         label_invalid_hand: "Bad Hand (Without Combo)",
@@ -88,9 +91,13 @@ const translations = {
         label_perfect_combo_nonengine: "Combo + Non-Engines",
         label_exact_hand: "Exact Hand (Minimum Categories Selected)",
         label_valid_combo_excess: "Valid Combo (With Excess)",
-        
         sim_desc: 'Statistical simulation performed over {RUNS} hands of {size} cards of your {linearDeck.length} cards deck.',
-        hand_label: 'Sample Hand'
+        hand_label: 'Sample Hand',
+        feedback_excellent: 'Excellent! Your deck is extremely consistent.',
+        feedback_good: 'Good! Hand is consistent in most duels.',
+        feedback_regular: 'Regular. You may struggle with bricks or lack of follow-up.',
+        feedback_bad: 'Inconsistent. I recommend adjusting your deck ratios.',
+        feedback_very_bad: 'Very Inconsistent! You will rarely open your ideal hand.',
     }
 };
 

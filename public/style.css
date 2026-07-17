@@ -48,6 +48,10 @@ h1, h2, h3, h4 {
     display: none !important;
 }
 
+#db-loaded{
+    font-size: 65%;
+}
+
 .btn {
     background-color: var(--primary);
     color: #fff;
