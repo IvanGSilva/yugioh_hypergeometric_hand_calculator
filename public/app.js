@@ -51,6 +51,8 @@ document.getElementById('ydk-file').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    resetarInterface();
+
     const reader = new FileReader();
     reader.onload = function(evt) {
         processarYDK(evt.target.result);
@@ -174,6 +176,7 @@ function renderizarWorkspace() {
 
     document.getElementById('deck-size').textContent = totalCartas;
     atualizarContadoresRoles();
+    atualizarPainelEstatisticas();
 }
 
 window.toggleRole = function(index, role) {
@@ -439,8 +442,19 @@ function atualizarPainelEstatisticas() {
     content.innerHTML = html;
 }
 
+// Reseta a interface completamente
+function resetarInterface() {
+    document.getElementById('result-box')?.classList.add('hidden');
+    document.getElementById('stats-panel')?.classList.add('hidden');
+    const hands = document.getElementById('hands-container');
+    if (hands) hands.innerHTML = '';
+}
+
 // CÁLCULO DE PROBABILIDADE
 document.getElementById('btn-calculate').addEventListener('click', () => {
+    
+    resetarInterface();
+    
     const handSize = parseInt(document.getElementById('hand-size').value);
     const reqStarters = parseInt(document.getElementById('cond-starters').value) || 0;
     const reqExtenders = parseInt(document.getElementById('cond-extenders').value) || 0;
