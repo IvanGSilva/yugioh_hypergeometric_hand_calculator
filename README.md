@@ -34,18 +34,26 @@ Desity and Hands Conainers
 ```text
 YU-GI-OH_PROBABILITY_CALCULATOR/
 ├── assets/
-|   └── cache-images   # Folder where the card images will be stored
-|   └── data           # Folder where the JSON file with the cards information will be sotred
+│   ├── cache-images/      # Local proxy cache for card images
+│   └── data/              # JSON database of Yu-Gi-Oh! cards
 |
 ├── public/
-│   └── style.css      # Stylesheet with dynamic grid/border themes
-│   └── app.js         # Core logic, simulation engine, and DOM manipulation
-|   └── index.html     # Main interface
+│   └── js/                # Frontend modular scripts
+│       ├── api.js         # Backend communication module
+│       ├── calc.js        # Probability and simulation algorithms
+│       ├── main.js        # Main application entry point
+│       ├── ui.js          # DOM manipulation and visual feedback
+│       └── ydk.js         # YDK deck file parsing logic
 |
-├── server.js          # Node.js backend (Local Express API)
-├── .gitignore         # Excludes node_modules and local cache files
-├── package.json       # Project dependencies (express, cors)
-└── README.md          # Project documentation
+│   ├── i18n.js            # Internationalization (i18n) settings
+│   ├── index.html         # Main user interface
+│   └── style.css          # Styling and dynamic theme assets
+|
+├── server.js              # Node.js Express backend API
+├── .gitignore             # Git exclusion rules
+├── package.json           # Dependencies and project metadata
+├── LICENSE                # Project license information
+└── README.md              # Project documentation
 ``` 
 
 ---
